@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -40,20 +43,27 @@ public class StudentController {
 		return service.SaveStudent(data);
 	}
 	
+	
 	@GetMapping("/students/{id}")
 	public ResponseEntity<?> getStudentById(@PathVariable("id") int id){
-		return service.findById(id);
+		Student student= service.getStudent(id);
+		return ResponseEntity.ok(student);
 	}
+	
 	
 	@DeleteMapping("/students/{id}")
 	public ResponseEntity<?> setStatusInactive(@PathVariable("id") int id){
-		return service.findStudent(id);
+		service.findStudent(id);
+	    return ResponseEntity.accepted().build();
 	}
 	
+	
 	@PutMapping("/students/{id}")
-	public ResponseEntity<?> updateStudentById(@PathVariable("id") int id,@RequestBody Student student){
-		return service.updateStudent(id, student);
+	public ResponseEntity<?> updateStudent(@PathVariable("id") int id,@RequestBody Student student){
+		Student stud= service.updateStudent(id, student);
+		return ResponseEntity.ok(stud);
 	}
+	
 	
 	@GetMapping("/students")
 	public ResponseEntity<Map<String, Object>> filterStudents(
@@ -71,12 +81,12 @@ public class StudentController {
 		    }
 		
 		 Map<String, Object> response = new HashMap<>();
-		    response.put("students", pageStudents.getContent());
-		    response.put("currentPage", pageStudents.getNumber());
-		    response.put("totalItems", pageStudents.getTotalElements());
-		    response.put("totalPages", pageStudents.getTotalPages());
-		    response.put("pageSize", pageStudents.getSize());
-		    response.put("sort", pageStudents.getSort());
+		    response.put("students",pageStudents.getContent());
+		    response.put("currentPage",pageStudents.getNumber());
+		    response.put("totalItems",pageStudents.getTotalElements());
+		    response.put("totalPages",pageStudents.getTotalPages());
+		    response.put("pageSize",pageStudents.getSize());
+		    response.put("sort",pageStudents.getSort());
 
 		    return ResponseEntity.ok(response);
 	}

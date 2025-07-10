@@ -1,5 +1,6 @@
 package com.student.Student_api;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 
 import jakarta.persistence.Column;
@@ -17,7 +18,9 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name="student")
-public class Student {
+public class Student implements Serializable{
+	
+	private static final long serialVersionUID = 1L;
 	
 	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	@Id

@@ -5,11 +5,15 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class StudentService {
@@ -25,53 +29,51 @@ public class StudentService {
 		return new ResponseEntity<>("Student Created Successfully",HttpStatus.CREATED);
 	}
 	
-	public ResponseEntity<?> findById(int id) {
-
-	    Optional<Student> Student=repo.findById(id);
-
-	    if (Student.isPresent()) {
-	        Student student=Student.get();
-	        return new ResponseEntity<>(student, HttpStatus.OK);
-	    } else {
-	        return new ResponseEntity<>("Student not found", HttpStatus.NOT_FOUND);
+	@Cacheable(value="students",key ="#p0")
+	public Student getStudent(int id) {
+	    return repo.findById(id)
+	        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+	}
+	
+	@CacheEvict(value="students",key="#p0")
+	public void findStudent(int id) {
+	    Optional<Student> student = repo.findById(id);
+	    if (student.isPresent()) {
+	        Student stud=student.get();
+	        stud.setStatus("INACTIVE");
+	        repo.save(stud);
+	    } else{
+	        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student not found");
 	    }
 	}
 	
-	public ResponseEntity<?> findStudent(int id){
-		Optional<Student> student=repo.findById(id);
-		if(student.isPresent()) {
-			Student stud=student.get();
-			stud.setStatus("INACTIVE");
-			repo.save(stud);
-			return new ResponseEntity<>(HttpStatus.ACCEPTED);
-		}else {
-			return new ResponseEntity<>("Student not found",HttpStatus.BAD_REQUEST);
-		}
-	}
 	
+	@Cacheable("students")
 	public Page<Student> getAllStudent(Pageable pageable){
 		return repo.findAll(pageable);
 		}
-	public ResponseEntity<?> updateStudent(int id,Student student){
-		Optional<Student> existStudent=repo.findById(id);
-		if(existStudent.isEmpty()) {
-			return new ResponseEntity<>("Student not found",HttpStatus.BAD_REQUEST);
-		}
-		Student oldstudent=existStudent.get();
-		if(!oldstudent.getEmail().equals(student.getEmail()) && repo.existsByEmail(student.getEmail())) {
-			return new ResponseEntity<>("Email Already in Use",HttpStatus.BAD_REQUEST);
-		}
-		oldstudent.setFirstName(student.getFirstName());
-		oldstudent.setLastName(student.getLastName());
-		oldstudent.setEmail(student.getEmail());
-		oldstudent.setEnrollmentDate(student.getEnrollmentDate());
-		oldstudent.setGpa(student.getGpa());
-		oldstudent.setStatus(student.getStatus());
-		oldstudent.setDateOfBirth(student.getDateOfBirth());
-		repo.save(oldstudent);
-		return new ResponseEntity<>("Student Details Updated Successfully",HttpStatus.ACCEPTED);
+	
+	@CachePut(value="students",key="#p0")
+	public Student updateStudent(int id,Student student){
+		Student existStudent=repo.findById(id).
+				orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Student not found"));
+		
+		
+		if (!existStudent.getEmail().equals(student.getEmail()) &&repo.existsByEmail(student.getEmail())) {
+		        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email Already in Use");
+		    }
+		existStudent.setFirstName(student.getFirstName());
+		existStudent.setLastName(student.getLastName());
+		existStudent.setEmail(student.getEmail());
+		existStudent.setEnrollmentDate(student.getEnrollmentDate());
+		existStudent.setGpa(student.getGpa());
+		existStudent.setStatus(student.getStatus());
+		existStudent.setDateOfBirth(student.getDateOfBirth());
+		return repo.save(existStudent);
+		
 	}
 	
+	@Cacheable("students")
 	public Page<Student> filterStudents(String status,Double minGpa,Double maxGpa,String name,Pageable pageable){
 			return repo.filterStudents(status, minGpa, maxGpa, name,pageable);
 	}
